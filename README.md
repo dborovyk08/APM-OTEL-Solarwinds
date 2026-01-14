@@ -100,22 +100,19 @@ kubectl create secret generic swo-api-token \
 
 ### 3. Install SolarWinds Infrastructure Agent
 To monitor the Kubernetes layer (Nodes, Pods, Cluster health) and act as a gateway, install the SolarWinds Agent.
+Use values.yaml from this git.
 
 ```
 helm repo add solarwinds [https://helm.solarwinds.io/](https://helm.solarwinds.io/)
 helm repo update
 
-helm install swo-agent solarwinds/solarwinds-observability-agent \
-  --namespace swo-lab \
-  --set solarwinds.apiToken=<YOUR_SWO_TOKEN> \
-  --set clusterName=polyglot-lab-cluster
+helm repo add solarwinds https://helm.solarwinds.com && helm install -f values.yaml swo-k8s-collector solarwinds/swo-k8s-collector --namespace swo-lab --atomic
 ```
 
-4. Deploy the SolarWinds Polyglot App
+### 4. Deploy the SolarWinds Polyglot App
 We will clone the specific branch configured for SolarWinds.
 
-Bash
-
+```
 # Clone the SolarWinds fork
 git clone -b swo/kubernetes [https://github.com/solarwinds/opentelemetry-demo.git](https://github.com/solarwinds/opentelemetry-demo.git)
 
@@ -123,19 +120,23 @@ git clone -b swo/kubernetes [https://github.com/solarwinds/opentelemetry-demo.gi
 cd opentelemetry-demo/kubernetes
 
 # Apply the manifests
+
 kubectl apply -f ./ -n swo-lab
-5. Add Digital Experience Monitoring (DEM)
+```
+
+### 5. Add Digital Experience Monitoring (DEM)
 To monitor the frontend as a real website and perform synthetic testing:
 
 Expose the Service:
 
-Bash
-
+```
 kubectl patch svc frontendproxy -n swo-lab -p '{"spec": {"type": "LoadBalancer"}}'
+```
+
 Configure in SaaS:
 
-Go to Digital Experience > Websites.
+* Go to Digital Experience > Websites.
 
-Add the LoadBalancer URL found via kubectl get svc -n swo-lab.
+* Add the LoadBalancer URL found via kubectl get svc -n swo-lab.
 
-Create a Synthetic Check (Availability or Transaction) to ping the site every minute.
+* Create a Synthetic Check (Availability or Transaction) to ping the site every minute.
