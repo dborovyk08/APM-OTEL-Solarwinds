@@ -1,0 +1,30 @@
+# swo-fix-values.yaml - Corrected Configuration
+
+# Global Settings
+cluster:
+  name: polyglot-lab-cluster
+
+# OpenTelemetry Collector (If used)
+otel:
+  endpoint: otel.collector.na-01.cloud.solarwinds.com:443
+
+# Solarwinds Agent Deployment
+swoagent:
+  enabled: true
+
+# Operator Configuration
+operator:
+  enabled: true
+  admissionWebhooks:
+    # --- FIX FOR SECRET NOT FOUND ERROR ---
+    # Explicitly enable the operator's built-in certificate generation.
+    autoGenerateCert:
+      enabled: true
+    # Explicitly disable reliance on cert-manager to avoid conflict/failure.
+    certManager:
+      enabled: false
+
+# Cert-manager Installation/Reliance
+# This must be false if operator.admissionWebhooks.autoGenerateCert is true.
+certmanager:
+  enabled: false
