@@ -56,6 +56,86 @@ kubectl get svc -n otel-demo my-otel-demo-frontendproxy --watch
 ```
 
 ### 4. Explore Open Source Tools
+Once the app is running, generate traffic by clicking around the website. Then, use port-forwarding to inspect the data locally.
+* **Jaeger (Traces)**:
+```
+kubectl port-forward svc/my-otel-demo-jaeger-query 16686:16686 -n otel-demo
+```
+Open http://localhost:16686 in your browser.
+* **Grafana (Metrics)**:
+```
+kubectl port-forward svc/my-otel-demo-grafana 3000:3000 -n otel-demo
+```
+Open http://localhost:3000 in your browser.
 
+* **Load-Balancing**
+Better way is to use exposed IP from cloud load-balancer so you do need port-forwarding.
 
+--
 
+## Part 2: SolarWinds Observability Integration
+
+For the second part of the lab, we switch to SolarWinds Observability.
+Why use the SolarWinds Fork? For the best interoperability, we use the specific [SolarWinds Fork](https://github.com/solarwinds/opentelemetry-demo/tree/swo/kubernetes).
+
+* It removes references to the generic pre-built OTEL collector.
+* It automatically points all traffic to your SolarWinds SaaS account.
+* It includes optimized instrumentation for APM (Java, Python, .NET, etc.).
+
+### 1.Preparation
+Create a new namespace for the production-style deployment.
+
+```
+kubectl create namespace swo-lab
+```
+
+### 2. Create the Secret
+The SolarWinds fork expects your API token to be available as a Kubernetes secret. Replace <YOUR_SWO_TOKEN> with your actual token.
+
+```
+kubectl create secret generic swo-api-token \
+  --from-literal=SWO_API_TOKEN=<YOUR_SWO_TOKEN> \
+  --namespace swo-lab
+```
+
+### 3. Install SolarWinds Infrastructure Agent
+To monitor the Kubernetes layer (Nodes, Pods, Cluster health) and act as a gateway, install the SolarWinds Agent.
+
+```
+helm repo add solarwinds [https://helm.solarwinds.io/](https://helm.solarwinds.io/)
+helm repo update
+
+helm install swo-agent solarwinds/solarwinds-observability-agent \
+  --namespace swo-lab \
+  --set solarwinds.apiToken=<YOUR_SWO_TOKEN> \
+  --set clusterName=polyglot-lab-cluster
+```
+
+4. Deploy the SolarWinds Polyglot App
+We will clone the specific branch configured for SolarWinds.
+
+Bash
+
+# Clone the SolarWinds fork
+git clone -b swo/kubernetes [https://github.com/solarwinds/opentelemetry-demo.git](https://github.com/solarwinds/opentelemetry-demo.git)
+
+# Navigate to the kubernetes directory
+cd opentelemetry-demo/kubernetes
+
+# Apply the manifests
+kubectl apply -f ./ -n swo-lab
+5. Add Digital Experience Monitoring (DEM)
+To monitor the frontend as a real website and perform synthetic testing:
+
+Expose the Service:
+
+Bash
+
+kubectl patch svc frontendproxy -n swo-lab -p '{"spec": {"type": "LoadBalancer"}}'
+Configure in SaaS:
+
+Go to Digital Experience > Websites.
+
+Add the LoadBalancer URL found via kubectl get svc -n swo-lab.
+
+Create a Synthetic Check (Availability or Transaction) to ping the site every minute.
